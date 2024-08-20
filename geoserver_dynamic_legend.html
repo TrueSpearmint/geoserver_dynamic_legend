@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Display a map on a webpage</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+      #legend {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        z-index: 1;
+        background: white;
+        padding: 5px;
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="legend">
+      <img id="legend-image" alt="Легенда карты" />
+    </div>
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoidHJ1ZXNwZWFybWludCIsImEiOiJjbHVpbDl1bXcwNTg1MmltdjI2NmpsNXdpIn0.hTURiBYjIAijbKZnfQPdrg";
+      const map = new mapboxgl.Map({
+        container: "map",
+
+        style: "mapbox://styles/truespearmint/clu5fl7ar00jz01praad30lra",
+        center: [37.847164, 56.011318],
+        zoom: 11.7,
+        minZoom: 7,
+        maxBounds: [
+          [35.579062, 54.461946],
+          [39.876909, 57.567873],
+        ],
+      });
+
+      function updateLegend() {
+        const bounds = map.getBounds().toArray().flat();
+        const bbox = bounds.join(",");
+        const width = map.getContainer().clientWidth;
+        const height = map.getContainer().clientHeight;
+        const srs = "EPSG:4326"; // используйте соответствующую систему координат
+
+        const legendUrl = `https://pushkino-maps.ru/geoserver/gwc/service/wms?REQUEST=GetLegendGraphic&LAYER=push_how_old:buildings_pushkino_how_old_is_wmts&format=image/png&LEGEND_OPTIONS=countMatched:true;fontAntiAliasing:true;hideEmptyRules:true&BBOX=${bbox}&SRCWIDTH=${width}&SRCHEIGHT=${height}&SRS=${srs}`;
+
+        document.getElementById("legend-image").src = legendUrl;
+      }
+
+      map.on("load", function () {
+        map.addSource("buildings_pushkino_how_old_is", {
+          type: "vector",
+          tiles: [
+            "https://pushkino-maps.ru/geoserver/gwc/service/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.1.1&LAYER=push_how_old:buildings_pushkino_how_old_is_wmts&STYLE=&TILEMATRIX=EPSG:900913:{z}&TILEMATRIXSET=EPSG:900913&FORMAT=application/vnd.mapbox-vector-tile&TILECOL={x}&TILEROW={y}",
+          ],
+          bounds: [37.78089132, 55.96388819, 37.93968874, 56.060285621],
+        });
+        map.addLayer({
+          id: "buildings_pushkino_how_old_is_id",
+          type: "fill-extrusion",
+          source: "buildings_pushkino_how_old_is",
+          "source-layer": "buildings_pushkino_how_old_is_wmts",
+          layout: { visibility: "visible" },
+          paint: {
+            "fill-extrusion-color": [
+              "step",
+              ["coalesce", ["get", "year_built_processed"], 0],
+              "#171717",
+              1694,
+              "#a52a2a",
+              1850,
+              "#D1673E",
+              1917,
+              "#F3972E",
+              1950,
+              "#CBBD63",
+              1975,
+              "#507A4D",
+              2000,
+              "#035656",
+              2010,
+              "#076F9E",
+              2020,
+              "#9457EB",
+            ],
+            "fill-extrusion-height": [
+              "step",
+              ["zoom"],
+              0,
+              13,
+              [
+                "match",
+                ["typeof", ["get", "height_processed"]],
+                "number",
+                ["get", "height_processed"],
+                0,
+              ],
+            ],
+          },
+        });
+
+        updateLegend(); // обновление легенды при загрузке карты
+      });
+
+      map.on("moveend", updateLegend); // обновление легенды при изменении границ карты
+    </script>
+  </body>
+</html>
